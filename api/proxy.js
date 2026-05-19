@@ -1,18 +1,24 @@
-export default async function handler(req, res) {
-  try {
-    const params = new URLSearchParams(req.query).toString()
-    const resp = await fetch(`https://admin.iqapi.cn/ajax.php?${params}`, {
-      headers: {
-        "Referer": "https://admin.iqapi.cn",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36"
-      },
-      signal: AbortSignal.timeout(10000)
+const http = require('http')
+const https = require('https')
+
+module.exports = (req, res) => {
+  const params = new URLSearchParams(req.query).toString()
+  const target = `https://admin.iqapi.cn/ajax.php?${params}`
+
+  https.get(target, {
+    headers: {
+      'Referer': 'https://admin.iqapi.cn',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+    },
+  }, (proxyRes) => {
+    let data = ''
+    proxyRes.on('data', chunk => data += chunk)
+    proxyRes.on('end', () => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.status(proxyRes.statusCode).send(data)
     })
-    const data = await resp.text()
+  }).on('error', err => {
     res.setHeader('Access-Control-Allow-Origin', '*')
-    res.status(resp.status).send(data)
-  } catch (err) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.status(500).send('代理异常：' + err.message)
-  }
+    res.status(500).send(err.message)
+  })
 }
